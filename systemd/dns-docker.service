@@ -1,0 +1,23 @@
+[Unit]
+Description=DNS proxy container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f dns${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name dns${NODEINDEX} \
+                 --hostname dns${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --network kazoo \
+                 --ip ${IPDNS} \
+                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \
+                 safarov/dnsmasq
+ExecStop=/usr/bin/docker stop dns${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

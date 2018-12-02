@@ -1,0 +1,34 @@
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/output/main.json",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {
+      "tls": {}
+    },
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {
+    "files": [
+      {
+        "filesystem": "root",
+        "overwrite": false,
+        "path": "/etc/default/kazoo-docker",
+        "contents": {
+          "source": "data:,KAZOOVERSION%3D4.3.21%0AZONE%3Ddc1%0ANODEINDEX%3D1a%0APEERINDEX%3D1b%0AKAZOOSUBNET%3D192.168.30.0%2F24%0AKAZOOGATEWAY%3D192.168.30.1%0AIPCOUCHDB%3D192.168.30.16%0AIPRABBITMQ%3D192.168.30.17%0AIPPOSTGRES%3D192.168.30.18%0AIPHAPROXY%3D192.168.30.19%0AIPDNS%3D192.168.30.20%0AIPKAPPS%3D192.168.30.21%0AIPECALLMGR%3D192.168.30.22%0AIPKAMAILIO%3D192.168.30.23%0AIPFREESWITCH%3D192.168.30.24%0AIPNGINX%3D192.168.30.25%0AIPHOMER%3D192.168.30.26%0ADAEMONPASSWORD%3Dchange_me%0A",
+          "verification": {}
+        },
+        "mode": 384
+      }
+    ]
+  },
+  "systemd": {}
+}

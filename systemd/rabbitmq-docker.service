@@ -1,0 +1,32 @@
+[Unit]
+Description=rabbitmq container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f rmq${NODEINDEX}
+ExecStartPre=-/usr/bin/docker volume rm rabbitmq
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name rmq${NODEINDEX} \
+                 --hostname rmq${NODEINDEX}.${NETNAME} \
+                 --network kazoo \
+                 --ip ${IPRABBITMQ} \
+                 --ulimit nofile=999999 \
+                 -e RABBITMQ_ERLANG_COOKIE=${DAEMONPASSWORD} \
+                 -e RABBITMQ_DEFAULT_USER=kazoo \
+                 -e RABBITMQ_DEFAULT_PASS=${DAEMONPASSWORD} \
+                 -e RABBITMQ_USE_LONGNAME=true \
+                 -e RABBITMQ_CLUSTER_PARTITION_HANDLING=autoheal \
+                 -e RABBITMQ_CLUSTER_NODES=rmq${PEERINDEX}${HOSTNAMESUFFIX} \
+                 -v rabbitmq:/var/lib/rabbitmq \
+                 safarov/rabbitmq
+ExecStop=/usr/bin/docker stop rmq${NODEINDEX}
+ExecStopPost=/usr/bin/docker volume rm rabbitmq
+
+[Install]
+WantedBy=kazoo.target

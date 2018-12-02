@@ -1,0 +1,16 @@
+[Unit]
+Description=Download kazoo config files
+Before=couchdb-docker.service freeswitch-docker.service haproxy-docker.service kamailio-docker.service kazoo-app-docker.service kazoo-ecallmgr-docker.service 
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-core.git /etc/kazoo/kazoo-configs-core
+ExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-freeswitch.git /etc/kazoo/kazoo-configs-freeswitch
+ExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-haproxy.git /etc/kazoo/kazoo-configs-haproxy
+ExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-couchdb.git /etc/kazoo/kazoo-configs-couchdb
+ExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-kamailio.git /etc/kazoo/kazoo-configs-kamailio
+
+[Install]
+WantedBy=kazoo.target
+

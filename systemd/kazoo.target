@@ -1,0 +1,6 @@
+[Unit]
+Description=Started kazoo daemons containers
+After=docker.service
+
+[Install]
+WantedBy=multi-user.target

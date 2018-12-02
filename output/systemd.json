@@ -1,0 +1,102 @@
+{
+  "ignition": {
+    "config": {},
+    "security": {
+      "tls": {}
+    },
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {},
+  "systemd": {
+    "units": [
+      {
+        "contents": "[Unit]\nDescription=CouchDB container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f couch${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name couch${NODEINDEX} \\\n                 --hostname couch${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --network kazoo \\\n                 --ip=${IPCOUCHDB} \\\n                 --ulimit nofile=999999 \\\n                 -v couchdb:/opt/couchdb/data \\\n                 -v /etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args:/opt/couchdb/etc/vm.args \\\n                 -v /etc/kazoo/kazoo-configs-couchdb/couchdb/local.ini:/opt/couchdb/etc/local.d/kazoo.ini \\\n                 apache/couchdb:2.3.0\nExecStop=/usr/bin/docker stop couch${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "couchdb-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=DNS proxy container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f dns${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name dns${NODEINDEX} \\\n                 --hostname dns${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --network kazoo \\\n                 --ip ${IPDNS} \\\n                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \\\n                 safarov/dnsmasq\nExecStop=/usr/bin/docker stop dns${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "dns-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=dumpcap container\nAfter=docker.service network-online.target\nRequires=docker.service\n\n\n[Service]\nRestart=always\nTimeoutStartSec=0\nEnvironmentFile=-/etc/default/dumpcap-docker\nExecStartPre=-/usr/bin/docker rm -f dumpcap-%i\n;Space symbol must be escaped https://www.freedesktop.org/software/systemd/man/systemd-escape.html\nExecStart=/usr/bin/docker run -t \\\n                 --rm=true \\\n                 --name=dumpcap-%i \\\n                 --network=container:%i \\\n                 -w=\"/dumpcap/%i\" \\\n                 -v dumpcap:/dumpcap \\\n                 safarov/dumpcap -i any -b duration:3600 -b files:36 -f \"host not 192.168.30.17 and not 192.168.30.18 and not 192.168.30.33\"\n\nExecStop=/usr/bin/docker stop dumpcap-%i\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enabled": true,
+        "name": "dumpcap-docker@.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Creates enenvironment file with public IP address\nBefore=kamailio-docker.service\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStartPre=-/usr/bin/rm /run/environment\nExecStart=/usr/bin/sh -c \"echo -n HOST_PUBLIC_IPV4=; \\\n                          curl -s -S http://169.254.169.254/latest/meta-data/public-ipv4\"\n\nStandardOutput=file:/run/environment\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "environment.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=fake FreeSwitch container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f media${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name media${NODEINDEX} \\\n                 --hostname media${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --network kazoo \\\n                 --init \\\n                 --ip ${IPFREESWITCH} \\\n                 --cap-add=NET_ADMIN \\\n                 safarov/fakehost\n\nExecStop=/usr/bin/docker stop media${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "fakehost-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=FreeSwitch container\nAfter=docker.service network-online.target rt_runtime_us.service kazoo-docker-network.service fakehost-docker.service\nRequires=docker.service rt_runtime_us.service kazoo-docker-network.service fakehost-docker.service\nWants=rt_runtime_us.service fakehost-docker.service dns-docker.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/etc/kazoo/kazoo-configs-freeswitch/freeswitch/freeswitch.xml\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f fs${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name fs${NODEINDEX} \\\n                 --network host \\\n                 --dns ${IPDNS} \\\n                 --hostname media${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \\\n                 --cap-add=sys_nice \\\n                 --cpu-rt-runtime=900000 \\\n                 --cgroup-parent=/system.slice \\\n                 --ulimit rtprio=99 \\\n                 --ulimit nofile=999999 \\\n                 -e SOUND_RATES=8000 \\\n                 -e SOUND_TYPES=music:en-us-callie \\\n                 -e EPMD=true \\\n                 -v freeswitch-logs:/var/log/freeswitch \\\n                 -v freeswitch-sounds:/usr/share/freeswitch/sounds \\\n                 -v freeswitch-tmp:/tmp \\\n                 -v /etc/kazoo/kazoo-configs-freeswitch/freeswitch:/etc/freeswitch \\\n                 -v /etc/default/kazoo-docker:/etc/default/kazoo-docker \\\n                 safarov/freeswitch:1.8.5\n\nExecStartPost=/opt/bin/overlay2host.sh media${NODEINDEX} fs${NODEINDEX}\nExecStop=/usr/bin/docker stop fs${NODEINDEX}\nExecStopPost=/usr/bin/ip link delete veth-fs${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "freeswitch-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=haproxy container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/etc/kazoo/kazoo-configs-haproxy/haproxy/haproxy.cfg\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f haproxy${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name haproxy${NODEINDEX} \\\n                 --network kazoo \\\n                 --hostname haproxy${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --ip ${IPHAPROXY} \\\n                 --ulimit nofile=999999 \\\n                 --init \\\n                 -v /dev/log:/dev/log \\\n                 -v /etc/kazoo/kazoo-configs-haproxy/haproxy:/usr/local/etc/haproxy \\\n                 haproxy:1.8.14-alpine\nExecStop=/usr/bin/docker stop haproxy${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "haproxy-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Kamailio container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service postgres-docker.service\nWants=environment.service postgres-docker.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/run/environment\nAssertPathExists=/etc/kazoo/kazoo-configs-kamailio/kamailio/local.cfg\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nEnvironmentFile=/run/environment\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f proxy${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver none \\\n                 --name proxy${NODEINDEX}  \\\n                 --hostname proxy${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --network kazoo \\\n                 --ip=${IPKAMAILIO} \\\n                 --add-host pg${HOSTNAMESUFFIX}:${IPPOSTGRES} \\\n                 -p 5060:5060 -p 5060:5060/udp \\\n                 -p 5061:5061 \\\n                 -p 5080:5080 -p 5080:5080/udp \\\n                 -p 7000:7000 -p 7000:7000/udp \\\n                 --ulimit nofile=999999 \\\n                 -v /etc/kazoo/kazoo-configs-kamailio/kamailio:/etc/kamailio/ \\\n                 -v /etc/kazoo/kazoo-configs-kamailio/kamailio:/etc/kazoo/kamailio \\\n                 -v /etc/kazoo/ssl:/etc/kazoo/kamailio/certs \\\n                 safarov/kamailio:5.1.6-alpine.debug -m 640 -M 80 \\\n                   -A \"MY_WAN_ADDRESS=${HOST_PUBLIC_IPV4}\" \\\n                   -A \"MY_IP_ADDRESS=${IPKAMAILIO}\"\nExecStop=/usr/bin/docker stop proxy${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kamailio-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=kazoo-app container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/etc/kazoo/kazoo-configs-core/core/config.ini\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f kz-app${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name kz-app${NODEINDEX} \\\n                 --network kazoo \\\n                 --hostname kz-app${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --ip ${IPKAPPS} \\\n                 --ulimit nofile=999999 \\\n                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \\\n                 --init \\\n                 -v /etc/kazoo/kazoo-configs-core/core:/etc/kazoo \\\n                 safarov/kazoo:${KAZOOVERSION}\nExecStop=/usr/bin/docker stop kz-app${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kazoo-app-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Checks kazoo network\nAfter=docker.service network-online.target\nRequires=docker.service\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nEnvironmentFile=/etc/default/kazoo-docker\nExecStart=/usr/bin/docker network inspect -f 'Checking kazoo network availability' ${NETNAME}\nExecStop=/usr/bin/true\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kazoo-docker-network.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=kazoo-ecallmgr container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\nAssertPathExists=/etc/kazoo/kazoo-configs-core/core/config.ini\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f kz-ecall${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name kz-ecall${NODEINDEX} \\\n                 --network kazoo \\\n                 --hostname kz-ecall${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --ip ${IPECALLMGR} \\\n                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \\\n                 --ulimit nofile=999999 \\\n                 --init \\\n                 -e KAZOO_NODE=ecallmgr \\\n                 -v /etc/kazoo/kazoo-configs-core/core:/etc/kazoo \\\n                 safarov/kazoo:${KAZOOVERSION}\nExecStop=/usr/bin/docker stop kz-ecall${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kazoo-ecallmgr-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Download kazoo config files\nBefore=couchdb-docker.service freeswitch-docker.service haproxy-docker.service kamailio-docker.service kazoo-app-docker.service kazoo-ecallmgr-docker.service \nAfter=network-online.target\n\n[Service]\nType=oneshot\nExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-core.git /etc/kazoo/kazoo-configs-core\nExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-freeswitch.git /etc/kazoo/kazoo-configs-freeswitch\nExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-haproxy.git /etc/kazoo/kazoo-configs-haproxy\nExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-couchdb.git /etc/kazoo/kazoo-configs-couchdb\nExecStart=-/usr/bin/git clone https://github.com/sergey-safarov/kazoo-configs-kamailio.git /etc/kazoo/kazoo-configs-kamailio\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kazoo-git-config.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Disabling kazoo-git-config.service after config downloaded\nAfter=kazoo-git-config.service\nAssertPathExists=/etc/kazoo/kazoo-configs-core/core/config.ini\nAssertPathExists=/etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args\nAssertPathExists=/etc/kazoo/kazoo-configs-freeswitch/freeswitch/freeswitch.xml\nAssertPathExists=/etc/kazoo/kazoo-configs-haproxy/haproxy/haproxy.cfg\nAssertPathExists=/etc/kazoo/kazoo-configs-kamailio/kamailio/local.cfg\n\n[Service]\nType=oneshot\nExecStart=/usr/bin/systemctl disable kazoo-git-config.service\nExecStart=/usr/bin/systemctl disable kazoo-git-disable.service\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "kazoo-git-disable.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Started kazoo daemons containers\nAfter=docker.service\n\n[Install]\nWantedBy=multi-user.target\n",
+        "enabled": true,
+        "name": "kazoo.target"
+      },
+      {
+        "contents": "[Unit]\nDescription=PostgreSQL container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f pg${NODEINDEX}\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver none \\\n                 --name pg${NODEINDEX}  \\\n                 --hostname pg${NODEINDEX}${HOSTNAMESUFFIX} \\\n                 --network kazoo \\\n                 --ip=${IPPOSTGRES} \\\n                 -v postgres:/var/lib/postgresql/data \\\n                 postgres:11.1-alpine\nExecStop=/usr/bin/docker stop pg${NODEINDEX}\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "postgres-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=rabbitmq container\nAfter=docker.service network-online.target kazoo-docker-network.service\nRequires=docker.service kazoo-docker-network.service\nAssertPathExists=/etc/default/kazoo-docker\n\n[Service]\nRestart=always\nEnvironmentFile=/etc/default/kazoo-docker\nTimeoutStartSec=0\nExecStartPre=-/usr/bin/docker rm -f rmq${NODEINDEX}\nExecStartPre=-/usr/bin/docker volume rm rabbitmq\nExecStart=/usr/bin/docker run -t --rm=true \\\n                 --log-driver=none \\\n                 --name rmq${NODEINDEX} \\\n                 --hostname rmq${NODEINDEX}.${NETNAME} \\\n                 --network kazoo \\\n                 --ip ${IPRABBITMQ} \\\n                 --ulimit nofile=999999 \\\n                 -e RABBITMQ_ERLANG_COOKIE=${DAEMONPASSWORD} \\\n                 -e RABBITMQ_DEFAULT_USER=kazoo \\\n                 -e RABBITMQ_DEFAULT_PASS=${DAEMONPASSWORD} \\\n                 -e RABBITMQ_USE_LONGNAME=true \\\n                 -e RABBITMQ_CLUSTER_PARTITION_HANDLING=autoheal \\\n                 -e RABBITMQ_CLUSTER_NODES=rmq${PEERINDEX}${HOSTNAMESUFFIX} \\\n                 -v rabbitmq:/var/lib/rabbitmq \\\n                 safarov/rabbitmq\nExecStop=/usr/bin/docker stop rmq${NODEINDEX}\nExecStopPost=/usr/bin/docker volume rm rabbitmq\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "rabbitmq-docker.service"
+      },
+      {
+        "contents": "[Unit]\nDescription=Sets /sys/fs/cgroup/cpu,cpuacct/system.slice/cpu.rt_runtime_us values\nBefore=docker.service\n\n[Service]\nType=oneshot\nRemainAfterExit=yes\nExecStart=/usr/bin/echo 950000\nStandardOutput=file:/sys/fs/cgroup/cpu/system.slice/cpu.rt_runtime_us\n\n[Install]\nWantedBy=kazoo.target\n",
+        "enabled": true,
+        "name": "rt_runtime_us.service"
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+[Unit]
+Description=Disabling kazoo-git-config.service after config downloaded
+After=kazoo-git-config.service
+AssertPathExists=/etc/kazoo/kazoo-configs-core/core/config.ini
+AssertPathExists=/etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args
+AssertPathExists=/etc/kazoo/kazoo-configs-freeswitch/freeswitch/freeswitch.xml
+AssertPathExists=/etc/kazoo/kazoo-configs-haproxy/haproxy/haproxy.cfg
+AssertPathExists=/etc/kazoo/kazoo-configs-kamailio/kamailio/local.cfg
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/systemctl disable kazoo-git-config.service
+ExecStart=/usr/bin/systemctl disable kazoo-git-disable.service
+
+[Install]
+WantedBy=kazoo.target
+

@@ -1,0 +1,31 @@
+ignition:
+  config:
+    append:
+      - source: "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/output/main.json"
+
+storage:
+  files:
+    - path: "/etc/default/kazoo-docker"
+      filesystem: root
+      mode: 0600
+      overwrite: false
+      contents:
+        inline: |
+          KAZOOVERSION=4.3.21
+          ZONE=dc1
+          NODEINDEX=1a
+          PEERINDEX=1b
+          NETNAME=kazoo
+          KAZOOGATEWAY=192.168.30.1
+          IPCOUCHDB=192.168.30.16
+          IPRABBITMQ=192.168.30.17
+          IPPOSTGRES=192.168.30.18
+          IPHAPROXY=192.168.30.19
+          IPDNS=192.168.30.20
+          IPKAPPS=192.168.30.21
+          IPECALLMGR=192.168.30.22
+          IPKAMAILIO=192.168.30.23
+          IPFREESWITCH=192.168.30.24
+          IPNGINX=192.168.30.25
+          IPHOMER=192.168.30.26
+          DAEMONPASSWORD=change_me

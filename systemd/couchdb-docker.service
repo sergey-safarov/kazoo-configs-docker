@@ -1,0 +1,27 @@
+[Unit]
+Description=CouchDB container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+AssertPathExists=/etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f couch${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name couch${NODEINDEX} \
+                 --hostname couch${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --network kazoo \
+                 --ip=${IPCOUCHDB} \
+                 --ulimit nofile=999999 \
+                 -v couchdb:/opt/couchdb/data \
+                 -v /etc/kazoo/kazoo-configs-couchdb/couchdb/vm.args:/opt/couchdb/etc/vm.args \
+                 -v /etc/kazoo/kazoo-configs-couchdb/couchdb/local.ini:/opt/couchdb/etc/local.d/kazoo.ini \
+                 apache/couchdb:2.3.0
+ExecStop=/usr/bin/docker stop couch${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

@@ -1,0 +1,14 @@
+[Unit]
+Description=Checks kazoo network
+After=docker.service network-online.target
+Requires=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+EnvironmentFile=/etc/default/kazoo-docker
+ExecStart=/usr/bin/docker network inspect -f 'Checking kazoo network availability' ${NETNAME}
+ExecStop=/usr/bin/true
+
+[Install]
+WantedBy=kazoo.target

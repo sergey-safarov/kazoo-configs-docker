@@ -1,0 +1,23 @@
+[Unit]
+Description=PostgreSQL container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f pg${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver none \
+                 --name pg${NODEINDEX}  \
+                 --hostname pg${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --network kazoo \
+                 --ip=${IPPOSTGRES} \
+                 -v postgres:/var/lib/postgresql/data \
+                 postgres:11.1-alpine
+ExecStop=/usr/bin/docker stop pg${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

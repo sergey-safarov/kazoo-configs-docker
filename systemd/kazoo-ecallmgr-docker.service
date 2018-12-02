@@ -1,0 +1,28 @@
+[Unit]
+Description=kazoo-ecallmgr container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+AssertPathExists=/etc/kazoo/kazoo-configs-core/core/config.ini
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f kz-ecall${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name kz-ecall${NODEINDEX} \
+                 --network kazoo \
+                 --hostname kz-ecall${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --ip ${IPECALLMGR} \
+                 --add-host haproxy${HOSTNAMESUFFIX}:${IPHAPROXY} \
+                 --ulimit nofile=999999 \
+                 --init \
+                 -e KAZOO_NODE=ecallmgr \
+                 -v /etc/kazoo/kazoo-configs-core/core:/etc/kazoo \
+                 safarov/kazoo:${KAZOOVERSION}
+ExecStop=/usr/bin/docker stop kz-ecall${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

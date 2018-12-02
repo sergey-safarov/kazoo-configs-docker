@@ -1,0 +1,38 @@
+[Unit]
+Description=Kamailio container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service postgres-docker.service
+Wants=environment.service postgres-docker.service
+AssertPathExists=/etc/default/kazoo-docker
+AssertPathExists=/run/environment
+AssertPathExists=/etc/kazoo/kazoo-configs-kamailio/kamailio/local.cfg
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+EnvironmentFile=/run/environment
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f proxy${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver none \
+                 --name proxy${NODEINDEX}  \
+                 --hostname proxy${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --network kazoo \
+                 --ip=${IPKAMAILIO} \
+                 --add-host pg${HOSTNAMESUFFIX}:${IPPOSTGRES} \
+                 -p 5060:5060 -p 5060:5060/udp \
+                 -p 5061:5061 \
+                 -p 5080:5080 -p 5080:5080/udp \
+                 -p 7000:7000 -p 7000:7000/udp \
+                 --ulimit nofile=999999 \
+                 -v /etc/kazoo/kazoo-configs-kamailio/kamailio:/etc/kamailio/ \
+                 -v /etc/kazoo/kazoo-configs-kamailio/kamailio:/etc/kazoo/kamailio \
+                 -v /etc/kazoo/ssl:/etc/kazoo/kamailio/certs \
+                 safarov/kamailio:5.1.6-alpine.debug -m 640 -M 80 \
+                   -A "MY_WAN_ADDRESS=${HOST_PUBLIC_IPV4}" \
+                   -A "MY_IP_ADDRESS=${IPKAMAILIO}"
+ExecStop=/usr/bin/docker stop proxy${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target
+

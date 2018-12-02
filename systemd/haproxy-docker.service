@@ -1,0 +1,27 @@
+[Unit]
+Description=haproxy container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+AssertPathExists=/etc/kazoo/kazoo-configs-haproxy/haproxy/haproxy.cfg
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f haproxy${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name haproxy${NODEINDEX} \
+                 --network kazoo \
+                 --hostname haproxy${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --ip ${IPHAPROXY} \
+                 --ulimit nofile=999999 \
+                 --init \
+                 -v /dev/log:/dev/log \
+                 -v /etc/kazoo/kazoo-configs-haproxy/haproxy:/usr/local/etc/haproxy \
+                 haproxy:1.8.14-alpine
+ExecStop=/usr/bin/docker stop haproxy${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

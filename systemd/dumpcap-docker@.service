@@ -1,0 +1,25 @@
+[Unit]
+Description=dumpcap container
+After=docker.service network-online.target
+Requires=docker.service
+
+
+[Service]
+Restart=always
+TimeoutStartSec=0
+EnvironmentFile=-/etc/default/dumpcap-docker
+ExecStartPre=-/usr/bin/docker rm -f dumpcap-%i
+;Space symbol must be escaped https://www.freedesktop.org/software/systemd/man/systemd-escape.html
+ExecStart=/usr/bin/docker run -t \
+                 --rm=true \
+                 --name=dumpcap-%i \
+                 --network=container:%i \
+                 -w="/dumpcap/%i" \
+                 -v dumpcap:/dumpcap \
+                 safarov/dumpcap -i any -b duration:3600 -b files:36 -f "host not 192.168.30.17 and not 192.168.30.18 and not 192.168.30.33"
+
+ExecStop=/usr/bin/docker stop dumpcap-%i
+
+[Install]
+WantedBy=multi-user.target
+

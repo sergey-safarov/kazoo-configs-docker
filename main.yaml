@@ -1,0 +1,46 @@
+ignition:
+  config:
+    append:
+      - source: "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/output/systemd.json"
+
+systemd:
+  units:
+    - name: update-engine.service
+      mask: true
+    - name: locksmithd.service
+      mask: true
+    - name: ntpd.service
+      enabled: true
+
+storage:
+  directories:
+    - filesystem: "root"
+      path: "/opt"
+      overwrite: false
+      mode: 0755
+
+    - filesystem: "root"
+      path: "/opt/bin"
+      overwrite: false
+      mode: 0755
+
+  files:
+    - path: "/opt/bin/overlay2host.sh"
+      filesystem: root
+      mode: 0755
+      overwrite: false
+      contents:
+        remote:
+          url: "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/scripts/overlay2host.sh"
+
+  files:
+    - path: "/etc/tmpfiles.d/dumpcap.conf"
+      filesystem: root
+      mode: 0644
+      overwrite: false
+      contents:
+        inline: d /var/lib/docker/volumes/dumpcap/_data - - - 12d
+
+docker:
+  flags:
+    - --userland-proxy=false

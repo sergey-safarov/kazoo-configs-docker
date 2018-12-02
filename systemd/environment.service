@@ -1,0 +1,16 @@
+[Unit]
+Description=Creates enenvironment file with public IP address
+Before=kamailio-docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/bin/rm /run/environment
+ExecStart=/usr/bin/sh -c "echo -n HOST_PUBLIC_IPV4=; \
+                          curl -s -S http://169.254.169.254/latest/meta-data/public-ipv4"
+
+StandardOutput=file:/run/environment
+
+[Install]
+WantedBy=kazoo.target
+

@@ -1,0 +1,12 @@
+[Unit]
+Description=Sets /sys/fs/cgroup/cpu,cpuacct/system.slice/cpu.rt_runtime_us values
+Before=docker.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/echo 950000
+StandardOutput=file:/sys/fs/cgroup/cpu/system.slice/cpu.rt_runtime_us
+
+[Install]
+WantedBy=kazoo.target

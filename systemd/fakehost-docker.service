@@ -1,0 +1,25 @@
+[Unit]
+Description=fake FreeSwitch container
+After=docker.service network-online.target kazoo-docker-network.service
+Requires=docker.service kazoo-docker-network.service
+AssertPathExists=/etc/default/kazoo-docker
+
+[Service]
+Restart=always
+EnvironmentFile=/etc/default/kazoo-docker
+TimeoutStartSec=0
+ExecStartPre=-/usr/bin/docker rm -f media${NODEINDEX}
+ExecStart=/usr/bin/docker run -t --rm=true \
+                 --log-driver=none \
+                 --name media${NODEINDEX} \
+                 --hostname media${NODEINDEX}${HOSTNAMESUFFIX} \
+                 --network kazoo \
+                 --init \
+                 --ip ${IPFREESWITCH} \
+                 --cap-add=NET_ADMIN \
+                 safarov/fakehost
+
+ExecStop=/usr/bin/docker stop media${NODEINDEX}
+
+[Install]
+WantedBy=kazoo.target

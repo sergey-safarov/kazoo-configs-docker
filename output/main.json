@@ -1,0 +1,73 @@
+{
+  "ignition": {
+    "config": {
+      "append": [
+        {
+          "source": "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/output/systemd.json",
+          "verification": {}
+        }
+      ]
+    },
+    "security": {
+      "tls": {}
+    },
+    "timeouts": {},
+    "version": "2.2.0"
+  },
+  "networkd": {},
+  "passwd": {},
+  "storage": {
+    "directories": [
+      {
+        "filesystem": "root",
+        "overwrite": false,
+        "path": "/opt",
+        "mode": 493
+      },
+      {
+        "filesystem": "root",
+        "overwrite": false,
+        "path": "/opt/bin",
+        "mode": 493
+      }
+    ],
+    "files": [
+      {
+        "filesystem": "root",
+        "overwrite": false,
+        "path": "/opt/bin/overlay2host.sh",
+        "contents": {
+          "source": "https://raw.githubusercontent.com/sergey-safarov/kazoo-configs-docker/master/scripts/overlay2host.sh",
+          "verification": {}
+        },
+        "mode": 493
+      }
+    ]
+  },
+  "systemd": {
+    "units": [
+      {
+        "dropins": [
+          {
+            "contents": "[Service]\nEnvironment=\"DOCKER_OPTS=--userland-proxy=false\"",
+            "name": "20-clct-docker.conf"
+          }
+        ],
+        "enable": true,
+        "name": "docker.service"
+      },
+      {
+        "mask": true,
+        "name": "update-engine.service"
+      },
+      {
+        "mask": true,
+        "name": "locksmithd.service"
+      },
+      {
+        "enabled": true,
+        "name": "ntpd.service"
+      }
+    ]
+  }
+}
