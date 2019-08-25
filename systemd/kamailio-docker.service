@@ -31,8 +31,10 @@ ExecStart=/usr/bin/docker run -t --rm=true \
                  safarov/kamailio:5.1.6-alpine.debug -m 640 -M 80 \
                    -A "MY_WAN_ADDRESS=${HOST_PUBLIC_IPV4}" \
                    -A "MY_IP_ADDRESS=${IPKAMAILIO}"
+
+ExecStartPost=/usr/bin/sleep 30
+ExecStartPost=/usr/bin/docker run --net=host --privileged --rm claesjonsson/conntrack -D --proto udp
 ExecStop=/usr/bin/docker stop proxy${NODEINDEX}
 
 [Install]
 WantedBy=kazoo.target
-
