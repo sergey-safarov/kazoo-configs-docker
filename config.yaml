@@ -11,10 +11,9 @@ storage:
       overwrite: false
       contents:
         inline: |
-          KAZOOVERSION=4.3.21
+          KAZOOVERSION=4.3.47
           ZONE=dc1
           NODEINDEX=1a
-          PEERINDEX=1b
           NETNAME=kazoo
           KAZOOGATEWAY=192.168.30.1
           IPCOUCHDB=192.168.30.16
@@ -29,3 +28,31 @@ storage:
           IPNGINX=192.168.30.25
           IPHOMER=192.168.30.26
           DAEMONPASSWORD=change_me
+
+    - path: "/etc/rabbitmq/advanced.config"
+      filesystem: root
+      mode: 0644
+      overwrite: false
+      contents:
+        inline: |
+          [
+           {rabbit,
+            [%%
+             %% cluster_formation.peer_discovery_backend = rabbit_peer_discovery_dns
+             %% cluster_formation.dns.hostname = rmq.discovery
+             {cluster_formation,
+              [
+               {peer_discovery_backend, rabbit_peer_discovery_dns},
+               {peer_discovery_dns,
+                [
+                 {hostname, "rmq.discovery"}
+                ]
+               }
+              ]
+             },
+          
+             %% Setting cluster behaviour after split brain
+             {cluster_partition_handling, autoheal}
+            ]
+           }
+          ].

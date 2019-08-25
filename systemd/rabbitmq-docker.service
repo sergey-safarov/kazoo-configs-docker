@@ -9,24 +9,24 @@ Restart=always
 EnvironmentFile=/etc/default/kazoo-docker
 TimeoutStartSec=0
 ExecStartPre=-/usr/bin/docker rm -f rmq${NODEINDEX}
-ExecStartPre=-/usr/bin/docker volume rm rabbitmq
+ExecStartPre=-/usr/bin/docker volume rm rabbitmq${NODEINDEX}
 ExecStart=/usr/bin/docker run -t --rm=true \
                  --log-driver=none \
                  --name rmq${NODEINDEX} \
                  --hostname rmq${NODEINDEX}.${NETNAME} \
                  --network kazoo \
+                 --network-alias rmq.discovery \
                  --ip ${IPRABBITMQ} \
                  --ulimit nofile=999999 \
                  -e RABBITMQ_ERLANG_COOKIE=${DAEMONPASSWORD} \
                  -e RABBITMQ_DEFAULT_USER=kazoo \
                  -e RABBITMQ_DEFAULT_PASS=${DAEMONPASSWORD} \
                  -e RABBITMQ_USE_LONGNAME=true \
-                 -e RABBITMQ_CLUSTER_PARTITION_HANDLING=autoheal \
-                 -e RABBITMQ_CLUSTER_NODES=rmq${PEERINDEX}${HOSTNAMESUFFIX} \
+                 -v /etc/rabbitmq/advanced.config:/etc/rabbitmq/advanced.config \
                  -v rabbitmq:/var/lib/rabbitmq \
-                 safarov/rabbitmq
+                 rabbitmq:3.7.17-alpine
 ExecStop=/usr/bin/docker stop rmq${NODEINDEX}
-ExecStopPost=/usr/bin/docker volume rm rabbitmq
+ExecStopPost=/usr/bin/docker volume rm rabbitmq${NODEINDEX}
 
 [Install]
 WantedBy=kazoo.target
