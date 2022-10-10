@@ -30,25 +30,25 @@ get_container_net() {
 get_container_netns() {
     local CONTAINER=$1
     local NETWORK=$2
-    docker inspect --format="1-{{.NetworkSettings.Networks.${NETWORK}.NetworkID}}" ${CONTAINER} | grep -o -P '^\S{12}'
+    docker inspect --format="1-{{(index .NetworkSettings.Networks \"${NETWORK}\").NetworkID}}" ${CONTAINER} | grep -o -P '^\S{12}'
 }
 
 get_container_ip() {
     local CONTAINER=$1
     local NETWORK=$2
-    docker inspect --format="{{.NetworkSettings.Networks.${NETWORK}.IPAddress}}" ${CONTAINER}
+    docker inspect --format="{{(index .NetworkSettings.Networks \"${NETWORK}\").IPAddress}}" ${CONTAINER}
 }
 
 get_container_mask() {
     local CONTAINER=$1
     local NETWORK=$2
-    docker inspect --format="{{.NetworkSettings.Networks.${NETWORK}.IPPrefixLen}}" ${CONTAINER}
+    docker inspect --format="{{(index .NetworkSettings.Networks \"${NETWORK}\").IPPrefixLen}}" ${CONTAINER}
 }
 
 get_container_mac() {
     local CONTAINER=$1
     local NETWORK=$2
-    docker inspect --format="{{.NetworkSettings.Networks.${NETWORK}.MacAddress}}" ${CONTAINER}
+    docker inspect --format="{{(index .NetworkSettings.Networks \"${NETWORK}\").MacAddress}}" ${CONTAINER}
 }
 
 add_link() {
